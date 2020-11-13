@@ -1,5 +1,3 @@
-package client;
-
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Component;
@@ -7,43 +5,25 @@ import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-import javax.swing.AbstractAction;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JEditorPane;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
-import javax.swing.KeyStroke;
 import javax.swing.ScrollPaneConstants;
 
-public class ClientUI extends JFrame implements Event {
-    /**
-     * 
-     */
-    private static final long serialVersionUID = 1L;
+public class PracticalUI2 extends JFrame {
     CardLayout card;
-    ClientUI self;
+    PracticalUI2 self;
     JPanel textArea;
-    JPanel userPanel;
-    List<User> users = new ArrayList<User>();
-    private final static Logger log = Logger.getLogger(ClientUI.class.getName());
-    Dimension windowSize = new Dimension(400, 400);
 
-    public ClientUI(String title) {
+    public PracticalUI2(String title) {
 	setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-	setPreferredSize(windowSize);
+	setPreferredSize(new Dimension(400, 400));
 	setLocationRelativeTo(null);
 	self = this;
 	setTitle(title);
@@ -52,12 +32,13 @@ public class ClientUI extends JFrame implements Event {
 	createConnectionScreen();
 	createUserInputScreen();
 	createPanelRoom();
-	createPanelUserList();
 	showUI();
     }
 
     void createConnectionScreen() {
 	JPanel panel = new JPanel();
+	// yes it's a bit weird setting layout and passing in the reference as to the
+	// LayoutManager.
 	panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 	JLabel hostLabel = new JLabel("Host:");
 	JTextField host = new JTextField("127.0.0.1");
@@ -72,18 +53,11 @@ public class ClientUI extends JFrame implements Event {
 
 	    @Override
 	    public void actionPerformed(ActionEvent e) {
+		// TODO trigger connection; let a callback change our page
 		String _host = host.getText();
 		String _port = port.getText();
 		if (_host.length() > 0 && _port.length() > 0) {
-		    try {
-			connect(_host, _port);
-			self.next();
-		    }
-		    catch (IOException e1) {
-			e1.printStackTrace();
-			// TODO handle error properly
-			log.log(Level.SEVERE, "Error connecting");
-		    }
+		    self.next();
 		}
 	    }
 
@@ -99,14 +73,14 @@ public class ClientUI extends JFrame implements Event {
 	JTextField username = new JTextField();
 	panel.add(userLabel);
 	panel.add(username);
-	JButton button = new JButton("Join");
+	JButton button = new JButton("Next");// TODO rename to something like Start or Login
 	button.addActionListener(new ActionListener() {
 
 	    @Override
 	    public void actionPerformed(ActionEvent e) {
+		// TODO trigger username payload
 		String name = username.getText();
 		if (name != null && name.length() > 0) {
-		    SocketClient.setUsername(name);
 		    self.next();
 		}
 	    }
@@ -133,19 +107,13 @@ public class ClientUI extends JFrame implements Event {
 	JTextField text = new JTextField();
 	input.add(text);
 	JButton button = new JButton("Send");
-	text.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "sendAction");
-	text.getActionMap().put("sendAction", new AbstractAction() {
-	    public void actionPerformed(ActionEvent actionEvent) {
-		button.doClick();
-	    }
-	});
-
 	button.addActionListener(new ActionListener() {
 
 	    @Override
 	    public void actionPerformed(ActionEvent e) {
+		// TODO trigger message payload
 		if (text.getText().length() > 0) {
-		    SocketClient.sendMessage(text.getText());
+		    self.addMessage(text.getText());
 		    text.setText("");
 		}
 	    }
@@ -154,39 +122,6 @@ public class ClientUI extends JFrame implements Event {
 	input.add(button);
 	panel.add(input, BorderLayout.SOUTH);
 	this.add(panel);
-    }
-
-    void createPanelUserList() {
-	userPanel = new JPanel();
-	userPanel.setLayout(new BoxLayout(userPanel, BoxLayout.Y_AXIS));
-	userPanel.setAlignmentY(Component.TOP_ALIGNMENT);
-
-	JScrollPane scroll = new JScrollPane(userPanel);
-	scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-	scroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
-
-	Dimension d = new Dimension(100, windowSize.height);
-	scroll.setPreferredSize(d);
-
-	textArea.getParent().getParent().getParent().add(scroll, BorderLayout.EAST);
-    }
-
-    void addClient(String name) {
-	User u = new User(name);
-	Dimension p = new Dimension(userPanel.getSize().width, 30);
-	u.setPreferredSize(p);
-	u.setMinimumSize(p);
-	u.setMaximumSize(p);
-	userPanel.add(u);
-	users.add(u);
-	pack();
-    }
-
-    void removeClient(User client) {
-	userPanel.remove(client);
-	client.removeAll();
-	userPanel.revalidate();
-	userPanel.repaint();
     }
 
     /***
@@ -214,7 +149,7 @@ public class ClientUI extends JFrame implements Event {
     void addMessage(String str) {
 	JEditorPane entry = new JEditorPane();
 	entry.setEditable(false);
-	// entry.setLayout(null);
+	entry.setLayout(null);
 	entry.setText(str);
 	Dimension d = new Dimension(textArea.getSize().width, calcHeightForText(str));
 	// attempt to lock all dimensions
@@ -222,11 +157,8 @@ public class ClientUI extends JFrame implements Event {
 	entry.setPreferredSize(d);
 	entry.setMaximumSize(d);
 	textArea.add(entry);
-
 	pack();
 	System.out.println(entry.getSize());
-	JScrollBar sb = ((JScrollPane) textArea.getParent().getParent()).getVerticalScrollBar();
-	sb.setValue(sb.getMaximum());
     }
 
     void next() {
@@ -237,65 +169,14 @@ public class ClientUI extends JFrame implements Event {
 	card.previous(this.getContentPane());
     }
 
-    void connect(String host, String port) throws IOException {
-	SocketClient.callbackListener(this);
-	SocketClient.connectAndStart(host, port);
-    }
-
     void showUI() {
 	pack();
 	Dimension lock = textArea.getSize();
 	textArea.setMaximumSize(lock);
-	lock = userPanel.getSize();
-	userPanel.setMaximumSize(lock);
 	setVisible(true);
     }
 
-    @Override
-    public void onClientConnect(String clientName, String message) {
-	log.log(Level.INFO, String.format("%s: %s", clientName, message));
-	addClient(clientName);
-	if (message != null && !message.isBlank()) {
-	    self.addMessage(String.format("%s: %s", clientName, message));
-	}
-    }
-
-    @Override
-    public void onClientDisconnect(String clientName, String message) {
-	log.log(Level.INFO, String.format("%s: %s", clientName, message));
-	Iterator<User> iter = users.iterator();
-	while (iter.hasNext()) {
-	    User u = iter.next();
-	    if (u.getName() == clientName) {
-		removeClient(u);
-		iter.remove();
-		self.addMessage(String.format("%s: %s", clientName, message));
-		break;
-	    }
-
-	}
-    }
-
-    @Override
-    public void onMessageReceive(String clientName, String message) {
-	log.log(Level.INFO, String.format("%s: %s", clientName, message));
-	self.addMessage(String.format("%s: %s", clientName, message));
-    }
-
-    @Override
-    public void onChangeRoom() {
-	Iterator<User> iter = users.iterator();
-	while (iter.hasNext()) {
-	    User u = iter.next();
-	    removeClient(u);
-	    iter.remove();
-	}
-    }
-
     public static void main(String[] args) {
-	ClientUI ui = new ClientUI("My UI");
-	if (ui != null) {
-	    log.log(Level.FINE, "Started");
-	}
+	PracticalUI2 ui = new PracticalUI2("My UI");
     }
 }
